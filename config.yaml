@@ -50,7 +50,7 @@ diagnostics:
   redundant_columns: ["prior_offenses", "age_in_months", "juvenile_total"]
 
 model:
-  type: "decision_tree" #"logistic_regression"  
+  type: "logistic_regression" #"decision_tree"  
   params: {}
     #max_iter: 1000
 
