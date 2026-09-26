@@ -2,6 +2,8 @@
 
 20260488 Darija Avramoska
 
+Updates after data cleaning: Logistic Regression is still the bette model, but with bigger overfitting on the train set. However, there is less overfitting with Decision Trees comparing to the previous results.   
+
 Current best model: Logistic Regression with test accuracy of 0.68 and test accuracy of 0.679. This model is better then Decision Tree, because there is no overfitting on the train dataset. With this we can say that Logistic Regression is better model to classify new unseen data. 
 
 This is the **starting point** for your semester project: a small but *complete* predictive pipeline -- every piece a real project needs (entry point, config, data loading, preprocessing, model, evaluation), just kept as simple as possible for now.
