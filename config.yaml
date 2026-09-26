@@ -50,9 +50,9 @@ diagnostics:
   redundant_columns: ["prior_offenses", "age_in_months", "juvenile_total"]
 
 model:
-  type: "logistic_regression"   # or "decision_tree"
-  params:
-    max_iter: 1000
+  type: "decision_tree" # "logistic_regression" 
+  params: {}
+    #max_iter: 1000
 
 output:
   results_dir: "results"   # each run's full report is saved here as a timestamped .txt file

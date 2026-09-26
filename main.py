@@ -15,7 +15,8 @@ from src.preprocessing import preprocess
 from src.model import build_model
 from src.evaluate import evaluate, fairness_report
 from src.results import save_run
-from src.preprocessing import clean_dataset
+#from src.preprocessing import clean_dataset
+from perprocessing_fun import clean_dataset
 
 
 def load_config(path: str = "config.yaml") -> dict:
