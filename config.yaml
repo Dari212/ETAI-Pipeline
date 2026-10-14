@@ -11,6 +11,13 @@ split:
   test_size: 0.2
   random_state: 42
 
+cv:
+  n_splits: 5
+  shuffle: true
+  random_state: 42
+  scoring: "accuracy"   # one metric for now, so numbers compare directly with weeks 2-3
+  n_jobs: 1
+
 diagnostics:
   id_column: "id"
   candidate_predictors: ["sex", "race", "age_cat", "c_charge_degree", "score_text"]
@@ -84,3 +91,15 @@ model:
 
 output:
   results_dir: "results"   # each run's full report is saved here as a timestamped .txt file
+
+tuning:
+  enabled: true
+  n_trials: 30
+  n_splits: 5                                       # folds that score each candidate
+  random_state: 42                                  # seeds the sampler and those folds
+  # Keys are Pipeline parameter names. Types: int / float (low, high, log) or categorical (choices).
+  search_spaces:
+    decision_tree:
+      model__max_depth: {type: int, low: 1, high: 20}
+      model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
+      model__criterion: {type: categorical, choices: ["gini", "entropy"]}
