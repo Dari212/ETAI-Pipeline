@@ -74,20 +74,16 @@ preprocessing:
     categorical_strategy: "most_frequent"   # applies to sex, age_cat, c_charge_degree
 
 model:
-  # one of: "dummy" (majority-class floor), "logistic_regression", "decision_tree", "random_forest"
-  # (random forest: sensible defaults, untuned -- see the example below)
-  type: "random_forest"
-  params: {}
-    # bumped from 1000 -- with this week's encoder/scaler pair in place, 1000 iterations
-    # was cutting lbfgs off before it converged (a ConvergenceWarning, not a real problem,
-    # but worth just giving it enough room rather than living with the warning)
-    #max_iter: 2000
-  # Random Forest example -- swap the two lines above for these to run it:
-  # type: "random_forest"
-  # params:
-  #   n_estimators: 300
-  #   random_state: 42   # forests are random (bootstrap rows + random feature subsets): fix the seed
-  #   n_jobs: -1         # use every CPU core -- the trees are independent, so they train in parallel
+  type: "random_forest"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost
+  params:
+    n_estimators: 200       # more trees never overfit, they only cost time
+    random_state: 42
+    n_jobs: -1              # -1 = all CPU cores
+  # Other models' params, to swap in:
+  # decision_tree:          {random_state: 42}
+  # logistic_regression:    {max_iter: 2000}
+  # oblique_random_forest:  {n_estimators: 200, n_components: 10, random_state: 42, n_jobs: -1}
+  # adaboost:               {max_depth: 1, n_estimators: 200, learning_rate: 1.0, random_state: 42}
 
 output:
   results_dir: "results"   # each run's full report is saved here as a timestamped .txt file
@@ -99,7 +95,11 @@ tuning:
   random_state: 42                                  # seeds the sampler and those folds
   # Keys are Pipeline parameter names. Types: int / float (low, high, log) or categorical (choices).
   search_spaces:
-    decision_tree:
+    random_forest:
+      model__n_estimators: {type: int, low: 50, high: 500}
       model__max_depth: {type: int, low: 1, high: 20}
       model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
-      model__criterion: {type: categorical, choices: ["gini", "entropy"]}
+    #decision_tree:
+    #  model__max_depth: {type: int, low: 1, high: 20}
+    #  model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
+    #  model__criterion: {type: categorical, choices: ["gini", "entropy"]}
