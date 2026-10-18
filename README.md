@@ -1,6 +1,8 @@
 # Baseline Predictive Pipeline -- ETAI
 
 20260488 Darija Avramoska
+  
+Several new models were compared using nested 5-fold cross-validation on accuracy metric. AdaBoost scored best, with validation 0.672 and train 0.682 (gap 0.010). The oblique random forest was a close second, with validation 0.669 and train 0.684 (gap 0.015), so slightly more overfitting. Both beat the tuned decision tree (validation 0.660), but the 0.003 difference between them is well within fold-to-fold variation (std about 0.02), so they are considered comparable. AdaBoost was selected because of the slightly higher score and smaller gap. However, the model is biased toward predicting class 0. It finds most non-reoffenders (recall 0.77) but misses nearly half of reoffenders (recall 0.55). Class 0 is also the larger class, which pulls the model that way.
 
 Added new models and preprocessing: Logistic regressions gave the same results. This time I tested random forest and it showed overfitting of 0.080.
 
