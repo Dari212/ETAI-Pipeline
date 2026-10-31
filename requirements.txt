@@ -5,3 +5,4 @@ PyYAML>=6.0
 ipykernel>=7.0,<8.0
 category-encoders >= 2.11
 optuna >= 4.0
+matplotlib>=3.7
