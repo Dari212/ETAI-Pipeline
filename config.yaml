@@ -11,11 +11,16 @@ split:
   test_size: 0.2
   random_state: 42
 
+test_set:
+  size: 0.2
+  random_state: 42
+
 cv:
   n_splits: 5
   shuffle: true
   random_state: 42
-  scoring: "accuracy"   # one metric for now, so numbers compare directly with weeks 2-3
+  metrics: ["accuracy", "balanced_accuracy", "precision", "recall", "f1", "fbeta_2", "roc_auc", "average_precision"]
+  selection_metric: "roc_auc" 
   n_jobs: 1
 
 diagnostics:
@@ -74,7 +79,7 @@ preprocessing:
     categorical_strategy: "most_frequent"   # applies to sex, age_cat, c_charge_degree
 
 model:
-  type: "gradient_boosting"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting
+  type: "hist_gradient_boosting"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting
   params:
      random_state: 42
   # Other models' params, to swap in:
@@ -86,7 +91,8 @@ model:
   # hist_gradient_boosting: {random_state: 42, class_weight: balanced}
 
 output:
-  results_dir: "results"   # each run's full report is saved here as a timestamped .txt file
+  #results_dir: "results"   # each run's full report is saved here as a timestamped .txt file
+  scoreboard: "results/runs.csv"
 
 tuning:
   enabled: true
