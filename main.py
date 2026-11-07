@@ -1,6 +1,8 @@
 import yaml
 import optuna
 from datetime import datetime
+import shutil
+import tempfile
 
 from src.data import load_data
 from src.model import build_model, build_pipeline
@@ -37,19 +39,24 @@ def main():
         test_size=config["test_set"]["size"],
         random_state=config["test_set"]["random_state"],
     )
+
     cv_config = config["cv"]
     shuffle = cv_config.get("shuffle", True)
     cv = StratifiedKFold(n_splits=cv_config["n_splits"], shuffle=shuffle,
                          random_state=cv_config.get("random_state") if shuffle else None)
     metrics = cv_config["metrics"]
     selection_metric = cv_config["selection_metric"]
+    selection_config = config.get("feature_selection") or {}
+    selection_enabled = selection_config.get("enabled")
     scorers = build_scorers(metrics)
     n_jobs = cv_config.get("n_jobs", 1)
     print(f"Model: {model_type}   |   selection metric: {selection_metric}   |   "
-          f"{cv_config['n_splits']}-fold CV")
+          f"{cv_config['n_splits']}-fold CV   |   feature selection: "
+          f"{'min_votes ' + str(selection_config.get('min_votes', 2)) if selection_enabled else 'off'}")
     print(f"Data:  {len(X_dev)} development rows   |   {len(X_test)} test rows locked away (not used)")
 
-    pipeline = build_pipeline(config["preprocessing"], config["model"])
+    cache_dir = tempfile.mkdtemp(prefix="pipeline_cache_")       
+    pipeline = build_pipeline(config["preprocessing"], config["model"], selection_config, memory=cache_dir)  
     floor_pipeline = build_pipeline(config["preprocessing"], {"type": "dummy"})
     floor_scores, _ = cross_validate_pipeline(floor_pipeline, X_dev, y_dev, cv,
                                               {selection_metric: scorers[selection_metric]}, selection_metric, n_jobs)
@@ -105,10 +112,15 @@ def main():
 
     pipeline.fit(X_dev, y_dev)
     refit = f"Final model: {model_type} refit on all {len(X_dev)} development rows."
+    if selection_enabled:
+        all_features = pipeline.named_steps["prep"].get_feature_names_out()
+        kept = pipeline.named_steps["select"].get_feature_names_out(all_features)
+        refit += f"\nFeatures kept: {len(kept)} of {len(all_features)}: {', '.join(kept)}"
     report += "\n" + refit + "\n"
 
     row = {"run": run, "data": config["data"]["path"], "model": model_type, "tuned": tuning_enabled,
            "encoder": config["preprocessing"]["encoder"], "scaler": config["preprocessing"]["scaler"],
+           "feature_selection": (f"min_votes {pipeline.named_steps['select'].min_votes}" if selection_enabled else "off"),
            "params": str(config["model"].get("params")), "tuned_params": str(study.best_params) if tuning_enabled else "",
            "metric": selection_metric, "mean": final_scores["validation"].mean(),
            "std": final_scores["validation"].std(ddof=1), "untuned": untuned, "floor": floor,
@@ -122,6 +134,7 @@ def main():
     print(f"\nScoreboard (runs on the same data and metric; best first)\n{board}")
     report += f"\nScoreboard:\n{board}\n"
 
+    shutil.rmtree(cache_dir, ignore_errors=True)
     path = save_run(config.get("output", {}).get("results_dir", "results"), run, config, report)
     print(f"\n{refit}\nFull report (per-fold tables, tuning, confusion matrix, fairness): {path}")
 

@@ -2,6 +2,8 @@
 
 20260488 Darija Avramoska
 
+I compared XGBoost without feature selection and with it. Selection kept 2 of 10 features, age and priors_count. Both runs have a nested ROC AUC of 0.725 with std of 0.012, and the corrected paired test on the five outer-fold scores gives a mean difference of 0.000, 0/5 wins, t = 0 and p = 1.0, so the smaller model is as good. I would keep selection on because a two-feature model scores the same as a ten-feature one and is cheaper and easier to explain.
+
 The result on the scoreboard, show hist gradient boost as the winner with 0.728 roc_auc. The winner is not far from the other models with a gap of 0.01 between the first and 4th model. All the models showed improved scores after tuning. In terms of FPR, the models didn't show much improvement (although lower than the COMPAS scores) and still have large and imbalanced rate between different races.   
   
 Several new models were compared using nested 5-fold cross-validation on accuracy metric. AdaBoost scored best, with validation 0.672 and train 0.682 (gap 0.010). The oblique random forest was a close second, with validation 0.669 and train 0.684 (gap 0.015), so slightly more overfitting. Both beat the tuned decision tree (validation 0.660), but the 0.003 difference between them is well within fold-to-fold variation (std about 0.02), so they are considered comparable. AdaBoost was selected because of the slightly higher score and smaller gap. However, the model is biased toward predicting class 0. It finds most non-reoffenders (recall 0.77) but misses nearly half of reoffenders (recall 0.55). Class 0 is also the larger class, which pulls the model that way.

@@ -79,7 +79,7 @@ preprocessing:
     categorical_strategy: "most_frequent"   # applies to sex, age_cat, c_charge_degree
 
 model:
-  type: "hist_gradient_boosting"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting
+  type: "xgboost"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting | xgboost
   params:
      random_state: 42
   # Other models' params, to swap in:
@@ -89,13 +89,21 @@ model:
   # adaboost:               {max_depth: 1, n_estimators: 200, learning_rate: 1.0, random_state: 42}
   # random forest:          {n_estimators: 200, random_state: 42, n_jobs: -1} 
   # hist_gradient_boosting: {random_state: 42, class_weight: balanced}
+  # xgboost:               {random_state: 42, n_jobs: -1}
 
 output:
   #results_dir: "results"   # each run's full report is saved here as a timestamped .txt file
   scoreboard: "results/runs.csv"
 
-tuning:
+feature_selection:
   enabled: true
+  min_votes: 2                                      # 1 (keep almost all) .. 3 (keep only unanimous)
+  random_state: 42
+  search_space:                                     # tuned together with the model when tuning is on
+    select__min_votes: {type: int, low: 1, high: 3}
+
+tuning:
+  enabled: ture
   n_trials: 30
   n_splits: 5                                       # folds that score each candidate
   random_state: 42                                  # seeds the sampler and those folds
@@ -130,3 +138,13 @@ tuning:
       model__max_leaf_nodes: {type: int, low: 2, high: 63, log: true}
       model__min_samples_leaf: {type: int, low: 5, high: 200, log: true}
       model__l2_regularization: {type: float, low: 0.000001, high: 10.0, log: true}
+    xgboost:
+      model__n_estimators: {type: int, low: 50, high: 600, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.3, log: true}
+      model__max_depth: {type: int, low: 1, high: 8}
+      model__min_child_weight: {type: float, low: 1.0, high: 50.0, log: true}
+      model__subsample: {type: float, low: 0.5, high: 1.0}
+      model__colsample_bytree: {type: float, low: 0.5, high: 1.0}
+      model__reg_lambda: {type: float, low: 0.01, high: 10.0, log: true}
+      model__reg_alpha: {type: float, low: 0.001, high: 10.0, log: true}
+      model__gamma: {type: float, low: 0.0, high: 5.0}
