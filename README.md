@@ -2,6 +2,13 @@
 
 20260488 Darija Avramoska
 
+Changes made to the code to adapt to the new dataset : 
+1. Error in the fairness report that had hardcoded the column 'score_text'. Now, it checks if there is a columns like that to use in the report or to skip it. 
+
+After the feature selection was run on all the features only 8 features out of 38 were kept (age, education_num, capital_gain, capital_loss, hours_per_week, marital_status, occupation, relationship) excluding any V features.
+In this dataset, sex is the sensible attribute that we exclude from the model and I decided to keep race in the features, because the model also didn't choose it as important and there can be correlation with the other variables that can impact the model performance.
+Removing relationship changed the FPR by sex only marginally (female 0.02 to 0.01, male 0.08 to 0.08), so it is not the main source of the gap. Other correlated features and base-rate differences in the data probably explain it.   
+
 I compared XGBoost without feature selection and with it. Selection kept 2 of 10 features, age and priors_count. Both runs have a nested ROC AUC of 0.725 with std of 0.012, and the corrected paired test on the five outer-fold scores gives a mean difference of 0.000, 0/5 wins, t = 0 and p = 1.0, so the smaller model is as good. I would keep selection on because a two-feature model scores the same as a ten-feature one and is cheaper and easier to explain.
 
 The result on the scoreboard, show hist gradient boost as the winner with 0.728 roc_auc. The winner is not far from the other models with a gap of 0.01 between the first and 4th model. All the models showed improved scores after tuning. In terms of FPR, the models didn't show much improvement (although lower than the COMPAS scores) and still have large and imbalanced rate between different races.   

@@ -35,6 +35,12 @@ def main(config_path: str = "config.yaml"):
     X, y, extras = split_features_target(df_clean, config["data"], mnar_sources)
 
     # From here on, every decision uses the development set only; the test set stays locked.
+    print("Target present:", y is not None)
+    print("Sensitive attribute:", config["data"]["sensitive_attr"])
+    print("Extras is None:", extras is None)
+    if extras is not None:
+        print("Extras columns:", extras.columns.tolist())
+
     X_dev, X_test, y_dev, y_test, extras_dev, extras_test = split_dev_test(
         X, y, extras,
         test_size=config["test_set"]["size"],
