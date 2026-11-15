@@ -4,6 +4,7 @@
 data:
   path: "data/adult_train.csv"
   target: "income_over_50k"
+  new_path: "data/adult_new.csv"
   sensitive_attr: "sex"  #"race"      
   drop_columns: ["id", "fnlwgt", "education", "race"]  
 
@@ -66,7 +67,7 @@ preprocessing:
     categorical_strategy: "most_frequent"  
 
 model:
-  type: "hist_gradient_boosting"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting | xgboost
+  type: "gradient_boosting"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting | xgboost
   params:
      random_state: 42
   # Other models' params, to swap in:
@@ -81,6 +82,9 @@ model:
 output:
   results_dir: "results/adult_dataset"   # each run's full report is saved here as a timestamped .txt file
   scoreboard: "results/adult_dataset/runs.csv"
+  predictions: "results/adult_dataset/predictions.csv"  # all test set predictions, for all runs, in one file
+
+  
 
 feature_selection:
   enabled: true

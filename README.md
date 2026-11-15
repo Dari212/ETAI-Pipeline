@@ -2,12 +2,52 @@
 
 20260488 Darija Avramoska
 
-Changes made to the code to adapt to the new dataset : 
-1. Error in the fairness report that had hardcoded the column 'score_text'. Now, it checks if there is a columns like that to use in the report or to skip it. 
+## Beyond COMPAS
 
-After the feature selection was run on all the features only 8 features out of 38 were kept (age, education_num, capital_gain, capital_loss, hours_per_week, marital_status, occupation, relationship) excluding any V features.
-In this dataset, sex is the sensible attribute that we exclude from the model and I decided to keep race in the features, because the model also didn't choose it as important and there can be correlation with the other variables that can impact the model performance.
-Removing relationship changed the FPR by sex only marginally (female 0.02 to 0.01, male 0.08 to 0.08), so it is not the main source of the gap. Other correlated features and base-rate differences in the data probably explain it.   
+I applied the pipeline to the Adult census data (Option A).
+
+### How to run
+
+    python main.py                    # COMPAS (config.yaml), unchanged
+    python main.py config_adult.yaml  # Adult
+
+`main.py` takes the config path as an optional argument and defaults to
+`config.yaml`. The Adult run also writes predictions for `adult_new.csv` to
+`results/adult_dataset/predictions.csv` (id, probability, 0/1 prediction; 2,000 rows).
+
+### What broke, why, and how I fixed it
+
+| What broke | Why | Fix |
+|---|---|---|
+| `fairness_report` crashed | It used COMPAS's `score_text` column | Made the COMPAS comparison conditional on `score_text` being present |
+| `?` placeholders left in `workclass`, `occupation`, `native_country` | Placeholder cleaning only ran for columns listed in `canonical_categories` | Listed these columns with empty mappings, so `?` becomes NaN without renaming labels |
+
+### Results (roc_auc, nested 5-fold CV, same folds)
+
+| Run | Model | Tuned | roc_auc | std |
+|---|---|---|---|---|
+| 20261115_015914 | hist_gradient_boosting | yes | 0.910 | 0.016 |
+| 20261115_203054 | gradient_boosting | yes | 0.910 | 0.016 |
+| 20261115_152944 | hist_gradient_boosting (no `race`) | yes | 0.909 | 0.016 |
+| 20261115_165320 | adaboost | yes | 0.906 | 0.016 |
+| 20261115_003835 | xgboost | no | 0.901 | 0.012 |
+| 20261115_014127 | decision_tree | no | 0.725 | 0.024 |
+| (dummy floor) | | | 0.500 | |
+
+The chosen run (20261115_203054, gradient_boosting, tuned) reaches all three
+target scores in nested 5-fold CV (honest estimate, mean ± std):
+ROC-AUC 0.910 ± 0.016 (target ≥ 0.90), accuracy 0.862 ± 0.010 (target ≥ 0.855)
+and F1 0.680 ± 0.031 (target ≥ 0.66, threshold 0.5). It also beats the no-model
+baseline (0.50 / 0.76 / 0.00) and the default decision tree (0.72 / 0.80 / 0.58).
+Corrected paired t-test vs the top run (20261115_015914): mean diff 0.0000,
+p = 0.999, so the top runs are statistically tied.
+
+After the feature selection was run on all the features only 8 features out of 37 were kept (age, education_num, capital_gain, capital_loss, hours_per_week, marital_status, occupation, relationship) excluding any V features. 
+After running the corrected_paired_test on the model with and without `race`, the results show that their is no evidence of difference between them. Because it does not cost accuracy and avoids using a sensitive attribute directly, I excluded race from the model.
+
+The hardest assumption to find was the missing values hidden as ? in the categorical columns, because the function that was actually doing that was the _canonicalize_categories that was also correcting the labels. What led me to the target scores was firstly the cleaning and preprocessing of the dataset, then testing different models with different config settings like adding feature selection, tuning, removing features and comparing the results and their performance. 
+
+## New model XGBoost
 
 I compared XGBoost without feature selection and with it. Selection kept 2 of 10 features, age and priors_count. Both runs have a nested ROC AUC of 0.725 with std of 0.012, and the corrected paired test on the five outer-fold scores gives a mean difference of 0.000, 0/5 wins, t = 0 and p = 1.0, so the smaller model is as good. I would keep selection on because a two-feature model scores the same as a ten-feature one and is cheaper and easier to explain.
 

@@ -4,10 +4,12 @@ import optuna
 from datetime import datetime
 import shutil
 import tempfile
+import pandas as pd
+from pathlib import Path
 
 from src.data import load_data
 from src.model import build_model, build_pipeline
-from src.evaluate import evaluate, fairness_report, oof_classification_report, cross_validate_pipeline, cv_report, build_scorers
+from src.evaluate import evaluate, fairness_report, oof_classification_report, cross_validate_pipeline, cv_report, build_scorers, corrected_paired_test
 from src.results import save_run
 from src.preprocessing import (
     clean_dataset, split_features_target, split_dev_test, add_engineered_features, drop_duplicate_rows
@@ -118,7 +120,26 @@ def main(config_path: str = "config.yaml"):
     report += "\n" + fairness_report(y_dev, oof_proba, extras_dev, sensitive_attr=config["data"]["sensitive_attr"])
 
     pipeline.fit(X_dev, y_dev)
-    refit = f"Final model: {model_type} refit on all {len(X_dev)} development rows."
+    new_path = config["data"].get("new_path")
+    if new_path:
+        df_new_raw = load_data(new_path)
+        df_new = clean_dataset(df_new_raw, config["diagnostics"])   # no drop_duplicate_rows
+        ids = df_new[config["diagnostics"]["id_column"]].values
+
+        X_new, _, _ = split_features_target(df_new, config["data"], mnar_sources)
+        X_new = X_new.reindex(columns=X_dev.columns)
+
+        proba = pipeline.predict_proba(X_new)[:, 1]
+        pred = (proba >= 0.5).astype(int)
+
+        assert len(proba) == len(df_new_raw), "rows out must equal rows in"
+
+        out = pd.DataFrame({"id": ids, "probability": proba, "prediction": pred})
+        out_path = config.get("output", {}).get("predictions", "results/predictions.csv")
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        out.to_csv(out_path, index=False)
+        print(f"Predictions for {len(out)} people saved to {out_path}")
+        refit = f"Final model: {model_type} refit on all {len(X_dev)} development rows."
     if selection_enabled:
         all_features = pipeline.named_steps["prep"].get_feature_names_out()
         kept = pipeline.named_steps["select"].get_feature_names_out(all_features)
@@ -140,6 +161,25 @@ def main(config_path: str = "config.yaml"):
              .to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     print(f"\nScoreboard (runs on the same data and metric; best first)\n{board}")
     report += f"\nScoreboard:\n{board}\n"
+
+    fold_cols = [c for c in same.columns if c.startswith("fold_")]
+    others = same[same["run"] != run].dropna(subset=fold_cols)
+    if len(others):
+        best = others.sort_values("mean", ascending=False).iloc[0]
+        k = len(fold_cols)
+        test = corrected_paired_test(
+            row_scores := [row[c] for c in fold_cols],
+            best[fold_cols].astype(float).values,
+            test_train_ratio=1 / (k - 1),
+        )
+        comparison = (
+            f"\nCorrected paired t-test: this run ({run}) vs best earlier run ({best['run']}), "
+            f"{selection_metric}\n"
+            f"  mean diff = {test['mean_diff']:+.4f}  wins = {test['wins']}  "
+            f"t = {test['t']:.2f}  p = {test['p_value']:.3f}"
+        )
+        print(comparison)
+        report += comparison + "\n"
 
     shutil.rmtree(cache_dir, ignore_errors=True)
     path = save_run(config.get("output", {}).get("results_dir", "results"), run, config, report)
