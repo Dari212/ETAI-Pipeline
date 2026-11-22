@@ -6,6 +6,8 @@ import shutil
 import tempfile
 import pandas as pd
 from pathlib import Path
+import os
+import joblib
 
 from src.data import load_data
 from src.model import build_model, build_pipeline
@@ -37,12 +39,6 @@ def main(config_path: str = "config.yaml"):
     X, y, extras = split_features_target(df_clean, config["data"], mnar_sources)
 
     # From here on, every decision uses the development set only; the test set stays locked.
-    print("Target present:", y is not None)
-    print("Sensitive attribute:", config["data"]["sensitive_attr"])
-    print("Extras is None:", extras is None)
-    if extras is not None:
-        print("Extras columns:", extras.columns.tolist())
-
     X_dev, X_test, y_dev, y_test, extras_dev, extras_test = split_dev_test(
         X, y, extras,
         test_size=config["test_set"]["size"],
@@ -121,6 +117,7 @@ def main(config_path: str = "config.yaml"):
 
     pipeline.fit(X_dev, y_dev)
     new_path = config["data"].get("new_path")
+
     if new_path:
         df_new_raw = load_data(new_path)
         df_new = clean_dataset(df_new_raw, config["diagnostics"])   # no drop_duplicate_rows
@@ -139,7 +136,8 @@ def main(config_path: str = "config.yaml"):
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         out.to_csv(out_path, index=False)
         print(f"Predictions for {len(out)} people saved to {out_path}")
-        refit = f"Final model: {model_type} refit on all {len(X_dev)} development rows."
+    refit = f"Final model: {model_type} refit on all {len(X_dev)} development rows."
+
     if selection_enabled:
         all_features = pipeline.named_steps["prep"].get_feature_names_out()
         kept = pipeline.named_steps["select"].get_feature_names_out(all_features)
@@ -184,6 +182,14 @@ def main(config_path: str = "config.yaml"):
     shutil.rmtree(cache_dir, ignore_errors=True)
     path = save_run(config.get("output", {}).get("results_dir", "results"), run, config, report)
     print(f"\n{refit}\nFull report (per-fold tables, tuning, confusion matrix, fairness): {path}")
+
+    # The final fitted pipeline: what predict.py loads to predict new data.
+    model_path = config.get("output", {}).get("model_path", "models/model.joblib")
+    os.makedirs(os.path.dirname(model_path) or ".", exist_ok=True)
+    pipeline.set_params(memory=None)                # the cache folder was deleted; the saved model doesn't need it
+    joblib.dump(pipeline, model_path)
+    print(f"\n{refit}\nFull report (per-fold tables, tuning, confusion matrix, fairness): {path}"
+          f"\nModel saved for predict.py: {model_path}")
 
 if __name__ == "__main__":
     config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yaml"

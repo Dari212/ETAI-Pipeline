@@ -2,6 +2,16 @@
 
 20260488 Darija Avramoska
 
+## Imputer Selection and Final Prediction
+
+After testing the models with different imputers and without hyperparameters tunning, KNN had the highest mean accuracy, but the difference was not statistically significant from the others, so the data can't separate the methods. The final tunning of the best model (hist gradient boosting) achieved highest roc_auc (0.726) with median imputation method.
+
+The command to run the predictions: 
+
+`python predict.py data/compas_new_people.csv predictions.csv`
+
+The output contains 3 columns: id, probability and predicitions for the new rows from the compas_new_people.csv.
+
 ## Beyond COMPAS
 
 I applied the pipeline to the Adult census data (Option A).

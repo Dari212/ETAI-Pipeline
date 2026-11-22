@@ -73,13 +73,16 @@ preprocessing:
   # pattern even though the fill itself is just a median/mode
   mnar_indicator_sources: ["priors_count", "c_charge_degree"]
   # seed for the target encoder's internal cross-fitting (week 4: sklearn's TargetEncoder)
-  random_state: 42
+  random_state: 42                                  # target encoder's folds and the model-based imputers
   imputation:
-    numeric_strategy: "median"        # applies to age, juv_fel_count, juv_misd_count, juv_other_count, priors_count
-    categorical_strategy: "most_frequent"   # applies to sex, age_cat, c_charge_degree
+    numeric_strategy: "median"                      # median | mean | knn | iterative | random_forest
+    categorical_strategy: "most_frequent"
+    n_neighbors: 50                                  # knn
+    max_iter: 100                                    # iterative, random_forest
+    n_estimators: 15                                # random_forest (trees per column)
 
 model:
-  type: "xgboost"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting | xgboost
+  type: "hist_gradient_boosting"     # dummy | logistic_regression | decision_tree | random_forest | oblique_random_forest | adaboost | gradient_boosting | hist_gradient_boosting | xgboost
   params:
      random_state: 42
   # Other models' params, to swap in:
@@ -94,6 +97,7 @@ model:
 output:
   #results_dir: "results"   # each run's full report is saved here as a timestamped .txt file
   scoreboard: "results/runs.csv"
+  model_path: "models/model.joblib"
 
 feature_selection:
   enabled: true
@@ -103,7 +107,7 @@ feature_selection:
     select__min_votes: {type: int, low: 1, high: 3}
 
 tuning:
-  enabled: ture
+  enabled: true
   n_trials: 30
   n_splits: 5                                       # folds that score each candidate
   random_state: 42                                  # seeds the sampler and those folds
